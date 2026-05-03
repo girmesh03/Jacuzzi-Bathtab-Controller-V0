@@ -31,6 +31,7 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 // ============================================================================
 bool initPCF8574();
 void showSplashScreen();
+void showReadyMessage();
 
 // ============================================================================
 // PCF8574 INITIALIZATION
@@ -110,6 +111,32 @@ void showSplashScreen()
 }
 
 // ============================================================================
+// READY MESSAGE DISPLAY
+// ============================================================================
+/**
+ * Display "READY" message after successful initialization
+ * Indicates system is ready for operation
+ */
+void showReadyMessage()
+{
+  DEBUG_PRINTLN("Displaying READY message");
+
+  // Clear display
+  display.clearDisplay();
+
+  // Set cursor to center
+  display.setCursor(40, 28);
+
+  // Display "READY" using F() macro to keep string in PROGMEM
+  display.println(F("READY"));
+
+  // Update display to show content
+  display.display();
+
+  DEBUG_PRINTLN("System Ready");
+}
+
+// ============================================================================
 // SETUP FUNCTION
 // ============================================================================
 void setup()
@@ -170,6 +197,9 @@ void setup()
 
   // Display splash screen for 2 seconds
   showSplashScreen();
+
+  // Display READY message
+  showReadyMessage();
 }
 
 // ============================================================================
