@@ -37,6 +37,8 @@ bool initPCF8574();
 /**
  * Initialize PCF8574 I2C I/O expander with all outputs OFF
  * Returns: true if successful, false on I2C communication failure
+ * 
+ * NOTE: Relays are ACTIVE-LOW, so HIGH = relay OFF, LOW = relay ON
  */
 bool initPCF8574()
 {
@@ -46,15 +48,15 @@ bool initPCF8574()
   // Begin I2C transmission to PCF8574
   Wire.beginTransmission(I2C_PCF8574_ADDR);
 
-  // Write 0x00 to set all outputs LOW (relays OFF)
-  Wire.write(0x00);
+  // Write 0xFF to set all outputs HIGH (relays OFF - active-low)
+  Wire.write(0xFF);
 
   // End transmission and check result
   uint8_t result = Wire.endTransmission();
 
   if (result == 0)
   {
-    DEBUG_PRINTLN("PCF8574 initialized successfully - all relays OFF");
+    DEBUG_PRINTLN("PCF8574 initialized successfully - all relays OFF (active-low)");
     return true;
   }
   else
