@@ -42,7 +42,7 @@ void setup() {
   
   // Initialize OLED display
   DEBUG_PRINT("Initializing OLED display at address 0x");
-  DEBUG_PRINTLN(I2C_OLED_ADDR, HEX);
+  DEBUG_PRINTLN(String(I2C_OLED_ADDR, HEX));
   
   if (!display.begin(I2C_OLED_ADDR, true)) {
     DEBUG_PRINTLN("ERROR: OLED display initialization failed!");
