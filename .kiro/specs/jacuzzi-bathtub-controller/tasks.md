@@ -122,7 +122,7 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
 
 **Step 4: Phase Execution**
 
-- [ ] 1. Create include/constants.h with ESP8266 pin assignments and all system constants
+- [-] 1. Create include/constants.h with ESP8266 pin assignments and all system constants
   
   **AI Agent Must**:
   - Create file `include/constants.h`
