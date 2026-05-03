@@ -30,6 +30,7 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 // FUNCTION DECLARATIONS
 // ============================================================================
 bool initPCF8574();
+void showSplashScreen();
 
 // ============================================================================
 // PCF8574 INITIALIZATION
@@ -37,7 +38,7 @@ bool initPCF8574();
 /**
  * Initialize PCF8574 I2C I/O expander with all outputs OFF
  * Returns: true if successful, false on I2C communication failure
- * 
+ *
  * NOTE: Relays are ACTIVE-LOW, so HIGH = relay OFF, LOW = relay ON
  */
 bool initPCF8574()
@@ -65,6 +66,47 @@ bool initPCF8574()
     DEBUG_PRINTLN(String(result));
     return false;
   }
+}
+
+// ============================================================================
+// SPLASH SCREEN DISPLAY
+// ============================================================================
+/**
+ * Display splash screen on OLED for 2 seconds
+ * Shows system title and version number
+ */
+void showSplashScreen()
+{
+  DEBUG_PRINTLN("Displaying splash screen");
+
+  // Clear display
+  display.clearDisplay();
+
+  // Set cursor to center for title
+  display.setCursor(10, 20);
+
+  // Display title using F() macro to keep string in PROGMEM
+  display.println(F("Jacuzzi Controller"));
+
+  // Set cursor for version
+  display.setCursor(40, 40);
+
+  // Display version
+  display.println(F("v1.0"));
+
+  // Update display to show content
+  display.display();
+
+  DEBUG_PRINTLN("Splash screen displayed");
+
+  // Non-blocking delay for 2 seconds
+  uint32_t splashStart = millis();
+  while (millis() - splashStart < 2000)
+  {
+    yield(); // Allow ESP8266 background tasks
+  }
+
+  DEBUG_PRINTLN("Splash screen timeout complete");
 }
 
 // ============================================================================
@@ -125,6 +167,9 @@ void setup()
       yield(); // Allow ESP8266 background tasks
     }
   }
+
+  // Display splash screen for 2 seconds
+  showSplashScreen();
 }
 
 // ============================================================================
