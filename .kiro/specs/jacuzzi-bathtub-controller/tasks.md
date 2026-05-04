@@ -384,7 +384,7 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
 
 **Step 4: Phase Execution**
 
-- [ ] 10. Create include/sensors.h header file
+- [-] 10. Create include/sensors.h header file
   
   **AI Agent Must**:
   - Create file `include/sensors.h`
