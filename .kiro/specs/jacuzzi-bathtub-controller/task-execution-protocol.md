@@ -1,3 +1,7 @@
+---
+inclusion: always
+---
+
 # Task Execution Protocol - MANDATORY
 
 This protocol defines **six mandatory steps** that MUST be followed when executing **each phase** listed in `.kiro/specs/jacuzzi-bathtub-controller/tasks.md`. No shortcuts. No exceptions.
@@ -44,6 +48,7 @@ This protocol defines **six mandatory steps** that MUST be followed when executi
 ### Codebase Analysis (Complete Deep Dive):
 
 - Read and understand ALL existing code files
+- Read and understand ALL documentations found `docs/*`
 - Identify current architecture patterns
 - Document existing state machine implementation
 - Identify optimization opportunities
