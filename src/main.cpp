@@ -28,6 +28,7 @@
 #include "Actuators.h"
 #include "Sensors.h"
 #include "Input.h"
+#include "Menu.h"
 
 // ============================================================================
 // DEBUG MACROS
@@ -47,11 +48,7 @@ DisplayManager displayManager;
 ActuatorManager actuatorManager;
 SensorManager sensors;
 InputManager input;
-
-// ============================================================================
-// TEST COUNTER (Phase 3)
-// ============================================================================
-int16_t testCounter = 0;
+MenuManager menu;
 
 // ============================================================================
 // SETUP FUNCTION
@@ -105,15 +102,17 @@ void setup()
   input.init();
   DEBUG_PRINTLN("Input initialized");
 
+  // Initialize menu manager (Phase 4)
+  menu.init();
+  DEBUG_PRINTLN("Menu initialized");
+
   // Display splash screen for SPLASH_SCREEN_DURATION
   displayManager.showSplashScreen();
-
-  // Display READY message
-  displayManager.showReadyMessage();
 
   DEBUG_PRINTLN("Phase 1 initialization complete");
   DEBUG_PRINTLN("Phase 2: Sensor integration active");
   DEBUG_PRINTLN("Phase 3: Rotary encoder input active");
+  DEBUG_PRINTLN("Phase 4: Basic menu system active");
 }
 
 // ============================================================================
@@ -127,6 +126,9 @@ void loop()
   // Update input manager (non-blocking)
   input.update();
   
+  // Update menu manager (idle timeout check)
+  menu.update();
+  
   // Process encoder events
   if (input.hasEvent())
   {
@@ -135,20 +137,21 @@ void loop()
     switch (event)
     {
       case ENCODER_CW:
-        testCounter++;
-        DEBUG_PRINT("Counter incremented: ");
-        DEBUG_PRINTLN(testCounter);
+        // Clockwise rotation - navigate menu down
+        menu.handleRotation(true);
+        DEBUG_PRINTLN("Encoder: CW - menu down");
         break;
         
       case ENCODER_CCW:
-        testCounter--;
-        DEBUG_PRINT("Counter decremented: ");
-        DEBUG_PRINTLN(testCounter);
+        // Counter-clockwise rotation - navigate menu up
+        menu.handleRotation(false);
+        DEBUG_PRINTLN("Encoder: CCW - menu up");
         break;
         
       case ENCODER_BUTTON:
-        testCounter = 0;
-        DEBUG_PRINTLN("Counter reset to 0");
+        // Button press - select menu item
+        menu.handlePress();
+        DEBUG_PRINTLN("Encoder: Button - menu select");
         break;
         
       case ENCODER_NONE:
@@ -158,21 +161,8 @@ void loop()
     }
   }
   
-  // Display sensor data with rate limiting (every DISPLAY_UPDATE_INTERVAL ms)
-  static uint32_t lastDisplayUpdate = 0;
-  
-  if (millis() - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL)
-  {
-    // Get sensor data
-    float temperature = sensors.getTemperature();
-    bool tempValid = sensors.isTemperatureValid();
-    bool waterLevelOK = sensors.isWaterLevelOK();
-    
-    // Display sensor data with counter through Display module (Phase 3)
-    displayManager.showSensorDataWithCounter(temperature, tempValid, waterLevelOK, testCounter);
-    
-    lastDisplayUpdate = millis();
-  }
+  // Update display based on current menu state (Phase 4)
+  displayManager.update(&sensors, &menu);
   
   // Allow ESP8266 background tasks
   yield();
