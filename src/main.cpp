@@ -46,8 +46,8 @@ SensorManager sensors;
 void setup()
 {
   // Initialize Serial for debug output
-  Serial.begin(115200);
-  delay(100); // Allow serial to stabilize
+  Serial.begin(SERIAL_BAUD_RATE);
+  delay(SERIAL_INIT_DELAY); // Allow serial to stabilize
 
   DEBUG_PRINTLN("Jacuzzi Controller Starting...");
   DEBUG_PRINTLN("Phase 1: Basic Hardware Initialization");
@@ -88,7 +88,7 @@ void setup()
   sensors.init();
   DEBUG_PRINTLN("Sensors initialized");
 
-  // Display splash screen for 2 seconds
+  // Display splash screen for SPLASH_SCREEN_DURATION
   displayManager.showSplashScreen();
 
   // Display READY message
@@ -99,80 +99,6 @@ void setup()
 }
 
 // ============================================================================
-// DISPLAY SENSOR DATA FUNCTION
-// ============================================================================
-/**
- * @brief Display temperature and water level on OLED
- * 
- * Displays current temperature (or "TEMP ERROR" if invalid)
- * Displays water level status ("Water: OK" or "LOW WATER" flashing)
- * 
- * Requirements: 4.3, 5.5, 23.1-23.4, 24.1-24.4
- */
-void displaySensorData()
-{
-  // Get display object reference
-  Adafruit_SH1106G &display = displayManager.getDisplay();
-  
-  // Clear display
-  display.clearDisplay();
-  
-  // ========================================================================
-  // DISPLAY TEMPERATURE
-  // ========================================================================
-  display.setTextSize(2);
-  display.setCursor(0, 0);
-  
-  if (sensors.isTemperatureValid())
-  {
-    // Display temperature with 0.1°C precision (XX.X°C format)
-    float temp = sensors.getTemperature();
-    display.print(temp, 1);  // 1 decimal place
-    display.println(F(" C"));  // Degree symbol not available in default font
-  }
-  else
-  {
-    // Display error message
-    display.println(F("TEMP ERROR"));
-  }
-  
-  // ========================================================================
-  // DISPLAY WATER LEVEL
-  // ========================================================================
-  display.setTextSize(1);
-  display.setCursor(0, 30);
-  
-  if (sensors.isWaterLevelOK())
-  {
-    // Water level OK - display normal message
-    display.println(F("Water: OK"));
-  }
-  else
-  {
-    // Water level LOW - display flashing warning
-    // Flash at 1 Hz (on for 500ms, off for 500ms)
-    static uint32_t lastFlashTime = 0;
-    static bool flashState = false;
-    
-    if (millis() - lastFlashTime >= 500)
-    {
-      flashState = !flashState;
-      lastFlashTime = millis();
-    }
-    
-    if (flashState)
-    {
-      display.println(F("LOW WATER"));
-    }
-  }
-  
-  // ========================================================================
-  // UPDATE DISPLAY
-  // ========================================================================
-  display.display();
-}
-
-// ============================================================================
 // MAIN LOOP
 // ============================================================================
 void loop()
@@ -180,12 +106,19 @@ void loop()
   // Update sensors (non-blocking)
   sensors.update();
   
-  // Display sensor data with rate limiting (every 500ms)
+  // Display sensor data with rate limiting (every DISPLAY_UPDATE_INTERVAL ms)
   static uint32_t lastDisplayUpdate = 0;
   
-  if (millis() - lastDisplayUpdate >= 500)
+  if (millis() - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL)
   {
-    displaySensorData();
+    // Get sensor data
+    float temperature = sensors.getTemperature();
+    bool tempValid = sensors.isTemperatureValid();
+    bool waterLevelOK = sensors.isWaterLevelOK();
+    
+    // Display sensor data through Display module
+    displayManager.showSensorData(temperature, tempValid, waterLevelOK);
+    
     lastDisplayUpdate = millis();
   }
   

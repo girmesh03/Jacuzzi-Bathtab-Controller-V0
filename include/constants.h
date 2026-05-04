@@ -48,13 +48,16 @@
 // ============================================================================
 // TIMING CONSTANTS (milliseconds)
 // ============================================================================
-#define TEMP_UPDATE_INTERVAL 2000  // Temperature reading interval
-#define WATER_LEVEL_INTERVAL 500   // Water level check interval
-#define DISPLAY_MIN_FRAME_TIME 100 // 10 FPS minimum
-#define ENCODER_DEBOUNCE_TIME 50   // Encoder debounce delay
-#define IDLE_TIMEOUT_DEFAULT 30000 // Default idle timeout (30 seconds)
-#define BUZZER_BEEP_SHORT 50       // Short beep duration
-#define BUZZER_BEEP_WARNING 200    // Warning beep duration
+#define TEMP_UPDATE_INTERVAL 2000    // Temperature reading interval
+#define WATER_LEVEL_INTERVAL 500     // Water level check interval
+#define DISPLAY_UPDATE_INTERVAL 500  // Display refresh interval for sensor data
+#define DISPLAY_MIN_FRAME_TIME 100   // 10 FPS minimum
+#define ENCODER_DEBOUNCE_TIME 50     // Encoder debounce delay
+#define IDLE_TIMEOUT_DEFAULT 30000   // Default idle timeout (30 seconds)
+#define BUZZER_BEEP_SHORT 50         // Short beep duration
+#define BUZZER_BEEP_WARNING 200      // Warning beep duration
+#define SPLASH_SCREEN_DURATION 2000  // Splash screen display duration
+#define WATER_LEVEL_FLASH_INTERVAL 500 // Water level warning flash interval (1 Hz)
 
 // ============================================================================
 // TEMPERATURE CONFIGURATION (Dynamic - easy to adjust)
@@ -80,6 +83,11 @@
 // false = sensor is active-high (HIGH when water present)
 #define WATER_LEVEL_ACTIVE_LOW true
 
+// Temperature sensor error codes
+#define TEMP_SENSOR_ERROR_CODE_DISCONNECTED -127.0f // DS18B20 disconnected
+#define TEMP_SENSOR_ERROR_CODE_NOT_READY 85.0f      // DS18B20 not ready
+#define TEMP_SENSOR_FAIL_THRESHOLD 3                // Consecutive failures before marking invalid
+
 // ============================================================================
 // SAFETY TIMING (milliseconds)
 // ============================================================================
@@ -99,13 +107,53 @@
 #define ACTUATOR_LIGHT 6
 #define ACTUATOR_RESERVED 7
 
+// Actuator configuration
+#define ACTUATOR_COUNT 8              // Total number of actuators (PCF8574 has 8 outputs)
+#define ACTUATOR_MAX_ID 7             // Maximum valid actuator ID (0-7)
+#define ACTUATOR_ALL_OFF 0x00         // All actuators OFF state
+
 // ============================================================================
 // MENU STRINGS (PROGMEM)
 // ============================================================================
 const char STR_SPLASH_TITLE[] PROGMEM = "Jacuzzi Controller";
 const char STR_READY[] PROGMEM = "READY";
 const char STR_INITIALIZING[] PROGMEM = "INITIALIZING...";
+const char STR_TEMP_ERROR[] PROGMEM = "TEMP ERROR";
+const char STR_WATER_OK[] PROGMEM = "Water: OK";
+const char STR_LOW_WATER[] PROGMEM = "LOW WATER";
+const char STR_DEGREE_C[] PROGMEM = " C"; // Degree symbol not available in default font
 
 // Additional strings will be added in later phases
+
+// ============================================================================
+// SERIAL COMMUNICATION
+// ============================================================================
+#define SERIAL_BAUD_RATE 115200      // Serial monitor baud rate
+#define SERIAL_INIT_DELAY 100        // Delay after serial initialization (ms)
+
+// ============================================================================
+// DISPLAY LAYOUT CONSTANTS
+// ============================================================================
+// Text sizes
+#define TEXT_SIZE_LARGE 2            // Large text (temperature, titles)
+#define TEXT_SIZE_NORMAL 1           // Normal text (status, labels)
+
+// Splash screen layout
+#define SPLASH_TITLE_LINE1_X 10
+#define SPLASH_TITLE_LINE1_Y 10
+#define SPLASH_TITLE_LINE2_X 4
+#define SPLASH_TITLE_LINE2_Y 30
+#define SPLASH_VERSION_X 52
+#define SPLASH_VERSION_Y 52
+
+// Ready message layout
+#define READY_MSG_X 32
+#define READY_MSG_Y 24
+
+// Sensor data display layout
+#define TEMP_DISPLAY_X 0
+#define TEMP_DISPLAY_Y 0
+#define WATER_STATUS_X 0
+#define WATER_STATUS_Y 30
 
 #endif // CONSTANTS_H

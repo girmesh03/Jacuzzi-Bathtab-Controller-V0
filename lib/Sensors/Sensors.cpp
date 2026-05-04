@@ -90,9 +90,9 @@ void SensorManager::update()
         float temp = tempSensor.getTempCByIndex(0);
         
         // Check for error codes
-        // -127.0°C = sensor disconnected or CRC error
-        // 85.0°C = sensor not ready or power-on reset value
-        if (temp == -127.0f || temp == 85.0f)
+        // TEMP_SENSOR_ERROR_CODE_DISCONNECTED = sensor disconnected or CRC error
+        // TEMP_SENSOR_ERROR_CODE_NOT_READY = sensor not ready or power-on reset value
+        if (temp == TEMP_SENSOR_ERROR_CODE_DISCONNECTED || temp == TEMP_SENSOR_ERROR_CODE_NOT_READY)
         {
             // Invalid temperature reading
             tempReadFailCount++;
@@ -102,11 +102,13 @@ void SensorManager::update()
             DEBUG_PRINT("°C), fail count: ");
             DEBUG_PRINTLN(tempReadFailCount);
             
-            // After 3 consecutive failures, mark sensor as invalid
-            if (tempReadFailCount >= 3)
+            // After TEMP_SENSOR_FAIL_THRESHOLD consecutive failures, mark sensor as invalid
+            if (tempReadFailCount >= TEMP_SENSOR_FAIL_THRESHOLD)
             {
                 tempValid = false;
-                DEBUG_PRINTLN("Temperature sensor marked as INVALID (3 consecutive failures)");
+                DEBUG_PRINT("Temperature sensor marked as INVALID (");
+                DEBUG_PRINT(TEMP_SENSOR_FAIL_THRESHOLD);
+                DEBUG_PRINTLN(" consecutive failures)");
             }
         }
         else
@@ -205,7 +207,7 @@ bool SensorManager::isWaterLevelOK()
 SensorStatus SensorManager::getStatus()
 {
     // Check for temperature sensor errors first
-    if (!tempValid && tempReadFailCount >= 3)
+    if (!tempValid && tempReadFailCount >= TEMP_SENSOR_FAIL_THRESHOLD)
     {
         return TEMP_SENSOR_DISCONNECTED;
     }

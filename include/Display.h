@@ -35,6 +35,9 @@ public:
 
     // Display error message
     void showError(const char *message);
+    
+    // Display sensor data (temperature and water level)
+    void showSensorData(float temperature, bool tempValid, bool waterLevelOK);
 
     // Get display object reference (for advanced usage)
     Adafruit_SH1106G &getDisplay();

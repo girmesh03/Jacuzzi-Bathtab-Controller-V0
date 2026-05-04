@@ -25,7 +25,7 @@ bool ActuatorManager::init() {
     
     // Initialize relay state to all OFF
     // NOTE: Relays are ACTIVE-LOW, so 0xFF = all relays OFF
-    relayState = 0x00;  // Internal state: 0 = OFF, 1 = ON
+    relayState = ACTUATOR_ALL_OFF;  // Internal state: 0 = OFF, 1 = ON
     
     // Write initial state to PCF8574 (inverted for active-low)
     Wire.beginTransmission(I2C_PCF8574_ADDR);
@@ -46,7 +46,7 @@ bool ActuatorManager::init() {
 // SET ACTUATOR STATE
 // ============================================================================
 bool ActuatorManager::setState(uint8_t actuatorId, bool state) {
-    if (actuatorId > 7) {
+    if (actuatorId > ACTUATOR_MAX_ID) {
         DEBUG_PRINTLN("ERROR: Invalid actuator ID");
         return false;
     }
@@ -66,7 +66,7 @@ bool ActuatorManager::setState(uint8_t actuatorId, bool state) {
 // GET ACTUATOR STATE
 // ============================================================================
 bool ActuatorManager::getState(uint8_t actuatorId) {
-    if (actuatorId > 7) {
+    if (actuatorId > ACTUATOR_MAX_ID) {
         return false;
     }
     
@@ -87,7 +87,7 @@ void ActuatorManager::emergencyShutdown() {
     DEBUG_PRINTLN("EMERGENCY SHUTDOWN - Deactivating all relays");
     
     // Set all relays OFF
-    relayState = 0x00;
+    relayState = ACTUATOR_ALL_OFF;
     
     // Write to PCF8574 (ignore return value in emergency)
     writeToExpander();
