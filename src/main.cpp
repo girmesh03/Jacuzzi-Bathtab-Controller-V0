@@ -13,6 +13,12 @@
 // - DS18B20 temperature sensor reading
 // - Water level sensor monitoring
 // - Sensor data display on OLED
+//
+// Phase 3: Rotary Encoder Input
+// - KY-040 rotary encoder input with debouncing
+// - Button press detection
+// - Buzzer feedback for user interactions
+// - Test counter display
 // ============================================================================
 
 #include <Arduino.h>
@@ -21,6 +27,7 @@
 #include "Display.h"
 #include "Actuators.h"
 #include "Sensors.h"
+#include "Input.h"
 
 // ============================================================================
 // DEBUG MACROS
@@ -39,6 +46,12 @@
 DisplayManager displayManager;
 ActuatorManager actuatorManager;
 SensorManager sensors;
+InputManager input;
+
+// ============================================================================
+// TEST COUNTER (Phase 3)
+// ============================================================================
+int16_t testCounter = 0;
 
 // ============================================================================
 // SETUP FUNCTION
@@ -88,6 +101,10 @@ void setup()
   sensors.init();
   DEBUG_PRINTLN("Sensors initialized");
 
+  // Initialize input manager (rotary encoder and buzzer)
+  input.init();
+  DEBUG_PRINTLN("Input initialized");
+
   // Display splash screen for SPLASH_SCREEN_DURATION
   displayManager.showSplashScreen();
 
@@ -96,6 +113,7 @@ void setup()
 
   DEBUG_PRINTLN("Phase 1 initialization complete");
   DEBUG_PRINTLN("Phase 2: Sensor integration active");
+  DEBUG_PRINTLN("Phase 3: Rotary encoder input active");
 }
 
 // ============================================================================
@@ -105,6 +123,40 @@ void loop()
 {
   // Update sensors (non-blocking)
   sensors.update();
+  
+  // Update input manager (non-blocking)
+  input.update();
+  
+  // Process encoder events
+  if (input.hasEvent())
+  {
+    EncoderEvent event = input.getEvent();
+    
+    switch (event)
+    {
+      case ENCODER_CW:
+        testCounter++;
+        DEBUG_PRINT("Counter incremented: ");
+        DEBUG_PRINTLN(testCounter);
+        break;
+        
+      case ENCODER_CCW:
+        testCounter--;
+        DEBUG_PRINT("Counter decremented: ");
+        DEBUG_PRINTLN(testCounter);
+        break;
+        
+      case ENCODER_BUTTON:
+        testCounter = 0;
+        DEBUG_PRINTLN("Counter reset to 0");
+        break;
+        
+      case ENCODER_NONE:
+      default:
+        // No action
+        break;
+    }
+  }
   
   // Display sensor data with rate limiting (every DISPLAY_UPDATE_INTERVAL ms)
   static uint32_t lastDisplayUpdate = 0;
@@ -116,8 +168,8 @@ void loop()
     bool tempValid = sensors.isTemperatureValid();
     bool waterLevelOK = sensors.isWaterLevelOK();
     
-    // Display sensor data through Display module
-    displayManager.showSensorData(temperature, tempValid, waterLevelOK);
+    // Display sensor data with counter through Display module (Phase 3)
+    displayManager.showSensorDataWithCounter(temperature, tempValid, waterLevelOK, testCounter);
     
     lastDisplayUpdate = millis();
   }

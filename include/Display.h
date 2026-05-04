@@ -38,6 +38,9 @@ public:
     
     // Display sensor data (temperature and water level)
     void showSensorData(float temperature, bool tempValid, bool waterLevelOK);
+    
+    // Display sensor data with counter (Phase 3)
+    void showSensorDataWithCounter(float temperature, bool tempValid, bool waterLevelOK, int16_t counter);
 
     // Get display object reference (for advanced usage)
     Adafruit_SH1106G &getDisplay();

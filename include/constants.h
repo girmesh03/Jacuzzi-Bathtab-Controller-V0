@@ -155,5 +155,7 @@ const char STR_DEGREE_C[] PROGMEM = " C"; // Degree symbol not available in defa
 #define TEMP_DISPLAY_Y 0
 #define WATER_STATUS_X 0
 #define WATER_STATUS_Y 30
+#define COUNTER_DISPLAY_X 0
+#define COUNTER_DISPLAY_Y 50
 
 #endif // CONSTANTS_H

@@ -225,3 +225,87 @@ void DisplayManager::showSensorData(float temperature, bool tempValid, bool wate
     // ========================================================================
     display->display();
 }
+
+// ============================================================================
+// SHOW SENSOR DATA WITH COUNTER (Phase 3)
+// ============================================================================
+/**
+ * @brief Display temperature, water level, and test counter on OLED
+ * 
+ * Displays current temperature (or "TEMP ERROR" if invalid)
+ * Displays water level status ("Water: OK" or "LOW WATER" flashing)
+ * Displays test counter value at bottom of screen
+ * 
+ * @param temperature Current temperature reading in °C
+ * @param tempValid True if temperature reading is valid
+ * @param waterLevelOK True if water level is OK
+ * @param counter Test counter value
+ * 
+ * Requirements: 4.3, 5.5, 23.1-23.4, 24.1-24.4, Phase 3 integration
+ */
+void DisplayManager::showSensorDataWithCounter(float temperature, bool tempValid, bool waterLevelOK, int16_t counter)
+{
+    // Clear display
+    display->clearDisplay();
+    
+    // ========================================================================
+    // DISPLAY TEMPERATURE
+    // ========================================================================
+    display->setTextSize(TEXT_SIZE_LARGE);
+    display->setCursor(TEMP_DISPLAY_X, TEMP_DISPLAY_Y);
+    
+    if (tempValid)
+    {
+        // Display temperature with 0.1°C precision (XX.X°C format)
+        display->print(temperature, 1);  // 1 decimal place
+        display->println(F(" C"));  // Degree symbol not available in default font
+    }
+    else
+    {
+        // Display error message using PROGMEM string
+        display->println(F("TEMP ERROR"));
+    }
+    
+    // ========================================================================
+    // DISPLAY WATER LEVEL
+    // ========================================================================
+    display->setTextSize(TEXT_SIZE_NORMAL);
+    display->setCursor(WATER_STATUS_X, WATER_STATUS_Y);
+    
+    if (waterLevelOK)
+    {
+        // Water level OK - display normal message
+        display->println(F("Water: OK"));
+    }
+    else
+    {
+        // Water level LOW - display flashing warning
+        // Flash at 1 Hz (on for WATER_LEVEL_FLASH_INTERVAL ms, off for WATER_LEVEL_FLASH_INTERVAL ms)
+        static uint32_t lastFlashTime = 0;
+        static bool flashState = false;
+        
+        if (millis() - lastFlashTime >= WATER_LEVEL_FLASH_INTERVAL)
+        {
+            flashState = !flashState;
+            lastFlashTime = millis();
+        }
+        
+        if (flashState)
+        {
+            display->println(F("LOW WATER"));
+        }
+    }
+    
+    // ========================================================================
+    // DISPLAY TEST COUNTER (Phase 3)
+    // ========================================================================
+    display->setTextSize(TEXT_SIZE_NORMAL);
+    display->setCursor(COUNTER_DISPLAY_X, COUNTER_DISPLAY_Y);
+    display->print(F("Counter: "));
+    display->println(counter);
+    
+    // ========================================================================
+    // UPDATE DISPLAY
+    // ========================================================================
+    display->display();
+}
