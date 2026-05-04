@@ -6,6 +6,7 @@
 //
 // Target Platform: ESP8266 (ESP-12E/ESP-12F)
 // Display: SH1106 128x64 OLED at I2C address 0x3C
+// Phase 4: Basic Menu System
 // ============================================================================
 
 #ifndef DISPLAY_H
@@ -14,6 +15,10 @@
 #include <Arduino.h>
 #include <Adafruit_SH110X.h>
 #include "Constants.h"
+
+// Forward declarations
+class SensorManager;
+class MenuManager;
 
 // ============================================================================
 // DISPLAY MANAGER CLASS
@@ -41,12 +46,27 @@ public:
     
     // Display sensor data with counter (Phase 3)
     void showSensorDataWithCounter(float temperature, bool tempValid, bool waterLevelOK, int16_t counter);
+    
+    // Update display based on current menu state (Phase 4)
+    void update(SensorManager* sensors, MenuManager* menu);
 
     // Get display object reference (for advanced usage)
     Adafruit_SH1106G &getDisplay();
 
 private:
     Adafruit_SH1106G *display; // Pointer to display object
+    uint32_t lastFrameTime;    // Frame rate limiting
+    bool needsRedraw;          // Dirty flag for optimization
+    
+    // Screen rendering methods
+    void showIdleScreen(SensorManager* sensors);
+    void showMainMenu(MenuManager* menu, SensorManager* sensors);
+    void showSettingsMenu(MenuManager* menu);
+    void showActuatorControl(MenuManager* menu, int8_t actuatorId);
+    
+    // Helper methods
+    void drawHeader(SensorManager* sensors);
+    void drawMenuItem(const char* label, uint8_t y, bool selected);
 };
 
 #endif // DISPLAY_H
