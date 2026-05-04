@@ -118,7 +118,7 @@ void SensorManager::update()
             lastTempUpdate = millis();
             
             DEBUG_PRINT("Temperature: ");
-            DEBUG_PRINT(temp, 1);
+            DEBUG_PRINT(temp);
             DEBUG_PRINTLN("°C");
         }
         

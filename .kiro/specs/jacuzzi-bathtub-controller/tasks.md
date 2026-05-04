@@ -384,7 +384,7 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
 
 **Step 4: Phase Execution**
 
-- [-] 10. Create include/sensors.h header file
+- [x] 10. Create include/sensors.h header file
   
   **AI Agent Must**:
   - Create file `include/sensors.h`
@@ -425,10 +425,10 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
   - AI agent executes: `git add include/sensors.h`
   - AI agent executes: `git commit -m "Create sensors.h with SensorManager class definition"`
 
-- [ ] 11. Implement src/sensors.cpp with DS18B20 temperature sensor reading
+- [x] 11. Implement lib/sensors.cpp with DS18B20 temperature sensor reading
   
   **AI Agent Must**:
-  - Create file `src/sensors.cpp`
+  - Create file `lib/sensors.cpp`
   - Include headers: `"sensors.h"`, `"constants.h"`
   - Create OneWire and DallasTemperature objects:
     ```cpp
