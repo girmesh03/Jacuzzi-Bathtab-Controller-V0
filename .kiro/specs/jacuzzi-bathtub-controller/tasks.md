@@ -476,7 +476,7 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
   - AI agent executes: `git add src/sensors.cpp`
   - AI agent executes: `git commit -m "Implement SensorManager with non-blocking sensor reading and polarity independence"`
 
-- [-] 12. Integrate sensors into src/main.cpp
+- [x] 12. Integrate sensors into src/main.cpp
   
   **AI Agent Must**:
   - In `src/main.cpp`, include `"sensors.h"`
