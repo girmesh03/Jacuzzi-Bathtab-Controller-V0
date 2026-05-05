@@ -261,16 +261,13 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
   - AI agent executes: `git add src/main.cpp`
   - AI agent executes: `git commit -m "Initialize PCF8574 with all relays OFF"`
 
-- [x] 5. Display splash screen on startup
+- [x] 5. Display splash screen with water drop bitmap on startup
   
   **AI Agent Must**:
-  - In `src/main.cpp`, create function `void showSplashScreen()`:
+  - In `src/main.cpp`, include `"Bitmaps.h"` header
+  - Create function `void showSplashScreen()`:
     - Clear display: `display.clearDisplay();`
-    - Set cursor to center: `display.setCursor(10, 20);`
-    - Load string from PROGMEM and display: Use `strcpy_P()` to load `STR_SPLASH_TITLE`
-    - Display title: `display.println(F("Jacuzzi Controller"));`
-    - Set cursor for version: `display.setCursor(40, 40);`
-    - Display version: `display.println(F("v1.0"));`
+    - Draw water drop bitmap centered: `display.drawBitmap(0, 0, water_drop_bitmap, WATER_DROP_BMPWIDTH, WATER_DROP_BMPHEIGHT, SH110X_WHITE);`
     - Update display: `display.display();`
   - Call `showSplashScreen()` in `setup()` after PCF8574 initialization
   - Add non-blocking delay using millis():
@@ -278,7 +275,7 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
     - Wait 2 seconds: `while(millis() - splashStart < 2000) { yield(); }`
   - _Requirements: 39.1-39.5_
   - AI agent executes: `git add src/main.cpp`
-  - AI agent executes: `git commit -m "Display splash screen for 2 seconds"`
+  - AI agent executes: `git commit -m "Display splash screen with water drop bitmap for 2 seconds"`
 
 - [x] 6. Display "READY" message after initialization
   
@@ -782,7 +779,7 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
 
 **Step 4: Phase Execution**
 
-- [ ] 25. Create include/menu.h with menu structure definitions
+- [ ] 25. Create include/menu.h with bitmap-based menu structure definitions
   
   **AI Agent Must**:
   - Create file `include/menu.h`
@@ -806,61 +803,63 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
         MENU_SETTINGS_ABOUT
     };
     ```
-  - Define MenuItem struct:
+  - Define MenuItem struct with bitmap support:
     ```cpp
     struct MenuItem {
-        const char* label;      // Stored in PROGMEM
-        MenuId submenu;         // Submenu to open, or MENU_IDLE if none
-        int8_t actuatorId;      // Actuator index, or -1 if not an actuator
+        const char* label;              // Stored in PROGMEM (for status text only)
+        const unsigned char* bitmap;    // Pointer to bitmap in PROGMEM
+        MenuId submenu;                 // Submenu to open, or MENU_IDLE if none
+        int8_t actuatorId;              // Actuator index, or -1 if not an actuator
     };
     ```
   - Declare menu arrays in PROGMEM (to be defined in menu.cpp)
-  - Declare MenuManager class with methods: `init()`, `update()`, `handleRotation()`, `handlePress()`, `getCurrentMenu()`, `isIdle()`
+  - Declare MenuManager class with methods: `init()`, `update()`, `handleRotation()`, `handlePress()`, `getCurrentMenu()`, `isIdle()`, `getSelectedItem()`
   - Private members: `currentMenu`, `selectedIndex`, `lastInteractionTime`
   - _Requirements: 12.1, 12.2, 19.5_
   - AI agent executes: `git add include/menu.h`
-  - AI agent executes: `git commit -m "Create menu.h with menu structure and MenuManager class"`
+  - AI agent executes: `git commit -m "Create menu.h with bitmap-based menu structure"`
 
-- [ ] 26. Implement src/menu.cpp with menu data and navigation logic
+- [ ] 26. Implement src/menu.cpp with bitmap-based menu data and navigation logic
   
   **AI Agent Must**:
   - Create file `src/menu.cpp`
-  - Include headers: `"menu.h"`, `"constants.h"`
-  - Define menu strings in PROGMEM:
+  - Include headers: `"menu.h"`, `"constants.h"`, `"Bitmaps.h"`
+  - Define menu strings in PROGMEM (for status text only):
     ```cpp
-    const char STR_MAIN_MENU[] PROGMEM = "Main Menu";
-    const char STR_CIRCULATION[] PROGMEM = "Circulation Pump";
-    const char STR_MASSAGE[] PROGMEM = "Massage Pump";
-    const char STR_JET[] PROGMEM = "Jet Pump";
+    const char STR_CIRCULATION[] PROGMEM = "Circulation";
+    const char STR_MASSAGE[] PROGMEM = "Massage";
+    const char STR_JET[] PROGMEM = "Jet";
     const char STR_HEATER[] PROGMEM = "Heater";
-    const char STR_OZONE[] PROGMEM = "Ozone Generator";
+    const char STR_OZONE[] PROGMEM = "Ozone";
     const char STR_SPEAKER[] PROGMEM = "Speaker";
     const char STR_LIGHT[] PROGMEM = "Light";
     const char STR_SETTINGS[] PROGMEM = "Settings";
     const char STR_TARGET_TEMP[] PROGMEM = "Target Temp";
     const char STR_IDLE_TIMEOUT[] PROGMEM = "Idle Timeout";
     const char STR_ABOUT[] PROGMEM = "About";
+    const char STR_ON[] PROGMEM = "ON";
+    const char STR_OFF[] PROGMEM = "OFF";
     ```
-  - Define main menu array in PROGMEM:
+  - Define main menu array in PROGMEM with bitmaps:
     ```cpp
     const MenuItem mainMenuItems[] PROGMEM = {
-        {STR_CIRCULATION, MENU_CIRCULATION_PUMP, ACTUATOR_CIRCULATION_PUMP},
-        {STR_MASSAGE, MENU_MASSAGE_PUMP, ACTUATOR_MASSAGE_PUMP},
-        {STR_JET, MENU_JET_PUMP, ACTUATOR_JET_PUMP},
-        {STR_HEATER, MENU_HEATER, ACTUATOR_HEATER},
-        {STR_OZONE, MENU_OZONE, ACTUATOR_OZONE},
-        {STR_SPEAKER, MENU_SPEAKER, ACTUATOR_SPEAKER},
-        {STR_LIGHT, MENU_LIGHT, ACTUATOR_LIGHT},
-        {STR_SETTINGS, MENU_SETTINGS, -1}
+        {STR_CIRCULATION, circulation_bitmpa, MENU_CIRCULATION_PUMP, ACTUATOR_CIRCULATION_PUMP},
+        {STR_MASSAGE, massage_bitmap, MENU_MASSAGE_PUMP, ACTUATOR_MASSAGE_PUMP},
+        {STR_JET, jet_bitmap, MENU_JET_PUMP, ACTUATOR_JET_PUMP},
+        {STR_HEATER, heater_bitmap, MENU_HEATER, ACTUATOR_HEATER},
+        {STR_OZONE, ozone_bitmap, MENU_OZONE, ACTUATOR_OZONE},
+        {STR_SPEAKER, speaker_bitmap, MENU_SPEAKER, ACTUATOR_SPEAKER},
+        {STR_LIGHT, light_bulb_bitmap, MENU_LIGHT, ACTUATOR_LIGHT},
+        {STR_SETTINGS, settings_bitmap, MENU_SETTINGS, -1}
     };
     const uint8_t mainMenuCount = 8;
     ```
-  - Define settings menu array in PROGMEM:
+  - Define settings menu array in PROGMEM with bitmaps:
     ```cpp
     const MenuItem settingsMenuItems[] PROGMEM = {
-        {STR_TARGET_TEMP, MENU_SETTINGS_TEMP, -1},
-        {STR_IDLE_TIMEOUT, MENU_SETTINGS_TIMEOUT, -1},
-        {STR_ABOUT, MENU_SETTINGS_ABOUT, -1}
+        {STR_TARGET_TEMP, thermometer_bitmap, MENU_SETTINGS_TEMP, -1},
+        {STR_IDLE_TIMEOUT, settings_bitmap, MENU_SETTINGS_TIMEOUT, -1},
+        {STR_ABOUT, settings_bitmap, MENU_SETTINGS_ABOUT, -1}
     };
     const uint8_t settingsMenuCount = 3;
     ```
@@ -869,9 +868,11 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
     - Set `selectedIndex = 0`
     - Set `lastInteractionTime = millis()`
     - Print debug message: "Menu manager initialized"
+  - Implement `MenuManager::getSelectedItem()`:
+    - Return pointer to current selected MenuItem from PROGMEM based on `currentMenu` and `selectedIndex`
   - _Requirements: 12.1, 12.2, 19.5_
   - AI agent executes: `git add src/menu.cpp`
-  - AI agent executes: `git commit -m "Define menu structure and data in PROGMEM"`
+  - AI agent executes: `git commit -m "Define bitmap-based menu structure and data in PROGMEM"`
 
 - [ ] 27. Implement menu navigation logic in src/menu.cpp
   
@@ -969,25 +970,37 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
   - AI agent executes: `git add src/display.cpp`
   - AI agent executes: `git commit -m "Implement idle screen with temperature and water level"`
 
-- [ ] 31. Implement menu rendering in src/display.cpp
+- [ ] 31. Implement bitmap-based menu rendering in src/display.cpp
   
   **AI Agent Must**:
+  - Include `"Bitmaps.h"` header in `src/display.cpp`
   - Implement `DisplayManager::showMainMenu(MenuManager* menu, SensorManager* sensors)`:
-    - Clear display
-    - Draw header with temperature and water level (small text, top 12 pixels)
-    - Draw menu title: "Main Menu" (centered, line 2)
-    - Get current menu items from PROGMEM
-    - Display 3 visible menu items (selected item in middle when possible)
-    - Highlight selected item with inverse video: `display->setTextColor(SH110X_BLACK, SH110X_WHITE)`
-    - Draw scroll indicators if more items above/below
-    - Update display
+    - Clear display: `display->clearDisplay()`
+    - Get current selected menu item from MenuManager
+    - Read bitmap pointer from PROGMEM: `const unsigned char* bitmap = pgm_read_ptr(&menuItem.bitmap)`
+    - Draw bitmap centered: `display->drawBitmap(0, 0, bitmap, 128, 64, SH110X_WHITE)`
+    - Read label from PROGMEM
+    - Set text size: `display->setTextSize(1)`
+    - Calculate text width for centering
+    - Draw label at bottom center: `display->setCursor(x_centered, 54)`
+    - Display label: `display->println(label)`
+    - Update display: `display->display()`
   - Implement `DisplayManager::showSettingsMenu(MenuManager* menu)`:
-    - Similar to main menu but for settings items
-    - Display "Settings" as title
-    - Show 3 visible items with selection highlight
+    - Same bitmap-based rendering as main menu
+    - Get selected settings item
+    - Draw bitmap centered
+    - Draw label at bottom center
+  - Implement `DisplayManager::showActuatorControl(MenuManager* menu, ActuatorManager* actuators)`:
+    - Clear display
+    - Get current menu item with bitmap
+    - Draw bitmap centered
+    - Get actuator state (ON/OFF)
+    - Draw label with status at bottom center: "Label ON" or "Label OFF"
+    - Set text size: `display->setTextSize(1)`
+    - Update display
   - _Requirements: 11.3, 11.4, 11.5, 11.6_
   - AI agent executes: `git add src/display.cpp`
-  - AI agent executes: `git commit -m "Implement menu rendering with scrolling and selection highlight"`
+  - AI agent executes: `git commit -m "Implement bitmap-based menu rendering with centered bitmaps and bottom text"`
 
 - [ ] 32. Implement display update with frame rate limiting
   
@@ -1346,9 +1359,10 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
   - AI agent executes: `git add src/safety.cpp`
   - AI agent executes: `git commit -m "Implement thermal runaway detection at 45°C threshold"`
 
-- [ ] 51. Implement fault state management in src/safety.cpp
+- [ ] 51. Implement fault state management with error bitmap display in src/safety.cpp
   
   **AI Agent Must**:
+  - Include `"Bitmaps.h"` header in `src/safety.cpp`
   - Implement `SafetyManager::enterFaultState(const char* reason)`:
     - Set `faultState = true`
     - Set `faultReason = reason`
@@ -1358,15 +1372,29 @@ This implementation plan breaks down the jacuzzi controller firmware into 10 inc
     - Return `faultState`
   - Implement `SafetyManager::getFaultReason()`:
     - Return `faultReason`
+  - Implement `SafetyManager::displayFaultScreen(Adafruit_SH1106G* display)`:
+    - Clear display: `display->clearDisplay()`
+    - Select appropriate error bitmap based on fault reason:
+      - "LOW WATER" or "WATER LEVEL": use `low_water_level_error_bitmap`
+      - "OVERHEAT" or "THERMAL": use `high_temperature_error_bitmap`
+      - Default: use `high_temperature_error_bitmap`
+    - Draw error bitmap centered: `display->drawBitmap(0, 0, error_bitmap, 128, 64, SH110X_WHITE)`
+    - Set text size: `display->setTextSize(1)`
+    - Calculate text width for centering
+    - Draw fault reason at bottom center: `display->setCursor(x_centered, 54)`
+    - Display reason: `display->println(faultReason)`
+    - Update display: `display->display()`
   - _Requirements: 8.6, 8.7_
   - AI agent executes: `git add src/safety.cpp`
-  - AI agent executes: `git commit -m "Implement sticky fault state management"`
+  - AI agent executes: `git commit -m "Implement fault state with error bitmap display"`
 
-- [ ] 52. Implement safety update loop in src/safety.cpp
+- [ ] 52. Implement safety update loop with fault screen display in src/safety.cpp
   
   **AI Agent Must**:
-  - Implement `SafetyManager::update(SensorManager* sensors, ActuatorManager* actuators)`:
+  - Update `SafetyManager` class to include display pointer
+  - Implement `SafetyManager::update(SensorManager* sensors, ActuatorManager* actuators, Adafruit_SH1106G* display)`:
     - If in fault state:
+      - Call `displayFaultScreen(display)` to show error bitmap with text
       - Manage continuous buzzer (1Hz on/off pattern)
       - Check if toggle time elapsed: `if (millis() - buzzerToggleTime >= 1000)`
       - Toggle buzzer: `buzzerState = !buzzerState`, `digitalWrite(PIN_BUZZER, buzzerState ? HIGH : LOW)`

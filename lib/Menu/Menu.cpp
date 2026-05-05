@@ -9,6 +9,7 @@
 
 #include "Menu.h"
 #include "Constants.h"
+#include "Bitmaps.h"
 
 // ============================================================================
 // DEBUG MACROS
@@ -22,43 +23,44 @@
 #endif
 
 // ============================================================================
-// MENU STRINGS (PROGMEM)
+// MENU STRINGS (PROGMEM) - For status text only
 // ============================================================================
-const char STR_MAIN_MENU[] PROGMEM = "Main Menu";
-const char STR_CIRCULATION[] PROGMEM = "Circulation Pump";
-const char STR_MASSAGE[] PROGMEM = "Massage Pump";
-const char STR_JET[] PROGMEM = "Jet Pump";
+const char STR_CIRCULATION[] PROGMEM = "Circulation";
+const char STR_MASSAGE[] PROGMEM = "Massage";
+const char STR_JET[] PROGMEM = "Jet";
 const char STR_HEATER[] PROGMEM = "Heater";
-const char STR_OZONE[] PROGMEM = "Ozone Generator";
+const char STR_OZONE[] PROGMEM = "Ozone";
 const char STR_SPEAKER[] PROGMEM = "Speaker";
 const char STR_LIGHT[] PROGMEM = "Light";
 const char STR_SETTINGS[] PROGMEM = "Settings";
 const char STR_TARGET_TEMP[] PROGMEM = "Target Temp";
 const char STR_IDLE_TIMEOUT[] PROGMEM = "Idle Timeout";
 const char STR_ABOUT[] PROGMEM = "About";
+const char STR_ON[] PROGMEM = " ON";
+const char STR_OFF[] PROGMEM = " OFF";
 
 // ============================================================================
-// MAIN MENU DATA (PROGMEM)
+// MAIN MENU DATA (PROGMEM) - With bitmaps
 // ============================================================================
 const MenuItem mainMenuItems[] PROGMEM = {
-    {STR_CIRCULATION, MENU_CIRCULATION_PUMP, ACTUATOR_CIRCULATION_PUMP},
-    {STR_MASSAGE, MENU_MASSAGE_PUMP, ACTUATOR_MASSAGE_PUMP},
-    {STR_JET, MENU_JET_PUMP, ACTUATOR_JET_PUMP},
-    {STR_HEATER, MENU_HEATER, ACTUATOR_HEATER},
-    {STR_OZONE, MENU_OZONE, ACTUATOR_OZONE},
-    {STR_SPEAKER, MENU_SPEAKER, ACTUATOR_SPEAKER},
-    {STR_LIGHT, MENU_LIGHT, ACTUATOR_LIGHT},
-    {STR_SETTINGS, MENU_SETTINGS, -1}
+    {STR_CIRCULATION, circulation_bitmap, MENU_CIRCULATION_PUMP, ACTUATOR_CIRCULATION_PUMP},
+    {STR_MASSAGE, massage_bitmap, MENU_MASSAGE_PUMP, ACTUATOR_MASSAGE_PUMP},
+    {STR_JET, jet_bitmap, MENU_JET_PUMP, ACTUATOR_JET_PUMP},
+    {STR_HEATER, heater_bitmap, MENU_HEATER, ACTUATOR_HEATER},
+    {STR_OZONE, ozone_bitmap, MENU_OZONE, ACTUATOR_OZONE},
+    {STR_SPEAKER, speaker_bitmap, MENU_SPEAKER, ACTUATOR_SPEAKER},
+    {STR_LIGHT, light_bulb_bitmap, MENU_LIGHT, ACTUATOR_LIGHT},
+    {STR_SETTINGS, settings_bitmap, MENU_SETTINGS, -1}
 };
 const uint8_t mainMenuCount = 8;
 
 // ============================================================================
-// SETTINGS MENU DATA (PROGMEM)
+// SETTINGS MENU DATA (PROGMEM) - With bitmaps
 // ============================================================================
 const MenuItem settingsMenuItems[] PROGMEM = {
-    {STR_TARGET_TEMP, MENU_SETTINGS_TEMP, -1},
-    {STR_IDLE_TIMEOUT, MENU_SETTINGS_TIMEOUT, -1},
-    {STR_ABOUT, MENU_SETTINGS_ABOUT, -1}
+    {STR_TARGET_TEMP, thermometer_bitmap, MENU_SETTINGS_TEMP, -1},
+    {STR_IDLE_TIMEOUT, settings_bitmap, MENU_SETTINGS_TIMEOUT, -1},
+    {STR_ABOUT, settings_bitmap, MENU_SETTINGS_ABOUT, -1}
 };
 const uint8_t settingsMenuCount = 3;
 

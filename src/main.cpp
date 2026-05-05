@@ -162,7 +162,7 @@ void loop()
   }
   
   // Update display based on current menu state (Phase 4)
-  displayManager.update(&sensors, &menu);
+  displayManager.update(&sensors, &menu, &actuatorManager);
   
   // Allow ESP8266 background tasks
   yield();

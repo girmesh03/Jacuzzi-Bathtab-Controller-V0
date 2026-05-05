@@ -38,9 +38,10 @@ enum MenuId {
 // MENU ITEM STRUCTURE
 // ============================================================================
 struct MenuItem {
-    const char* label;          // Menu item label (stored in PROGMEM)
-    MenuId submenu;             // Submenu to open, or MENU_IDLE if none
-    int8_t actuatorId;          // Actuator index (0-7), or -1 if not an actuator
+    const char* label;              // Menu item label (stored in PROGMEM) - for status text only
+    const unsigned char* bitmap;    // Pointer to bitmap in PROGMEM
+    MenuId submenu;                 // Submenu to open, or MENU_IDLE if none
+    int8_t actuatorId;              // Actuator index (0-7), or -1 if not an actuator
 };
 
 // ============================================================================
@@ -79,5 +80,9 @@ extern const uint8_t mainMenuCount;
 // Settings menu items
 extern const MenuItem settingsMenuItems[] PROGMEM;
 extern const uint8_t settingsMenuCount;
+
+// Status strings
+extern const char STR_ON[] PROGMEM;
+extern const char STR_OFF[] PROGMEM;
 
 #endif // MENU_H
