@@ -19,6 +19,9 @@
 #include <Arduino.h>
 #include "Constants.h"
 
+// Forward declaration
+class SensorManager;
+
 // ============================================================================
 // ACTUATOR MANAGER CLASS
 // ============================================================================
@@ -28,8 +31,8 @@ public:
     // Initialize PCF8574 with all outputs OFF
     bool init();
 
-    // Set actuator state (true = ON, false = OFF)
-    bool setState(uint8_t actuatorId, bool state);
+    // Set actuator state with safety interlock checks (true = ON, false = OFF)
+    bool setState(uint8_t actuatorId, bool state, SensorManager* sensors);
 
     // Get actuator state
     bool getState(uint8_t actuatorId);

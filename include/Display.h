@@ -39,8 +39,18 @@ public:
     // Display READY message after initialization
     void showReadyMessage();
 
-    // Display error message with error bitmap
-    void showError(const char *message);
+    // Error queue management
+    void addError(const char *message, bool critical = true);  // Add error (critical or dismissible)
+    void removeError(const char *message);    // Remove specific error from queue
+    void clearAllErrors();                    // Clear all errors
+    bool hasErrors();                         // Check if any errors exist
+    bool hasCriticalErrors();                 // Check if any critical errors exist
+    const char* getCurrentError();            // Get current error message
+    bool isCurrentErrorCritical();            // Check if current error is critical
+    void nextError();                         // Navigate to next error
+    void prevError();                         // Navigate to previous error
+    void dismissCurrentError();               // Dismiss current error (if not critical)
+    uint8_t getErrorCount();                  // Get total error count
     
     // Display sensor data (temperature and water level)
     void showSensorData(float temperature, bool tempValid, bool waterLevelOK);
@@ -59,16 +69,31 @@ private:
     uint32_t lastFrameTime;    // Frame rate limiting
     bool needsRedraw;          // Dirty flag for optimization
     
+    // Water level flash state (centralized)
+    uint32_t waterLevelFlashTime;
+    bool waterLevelFlashState;
+    
+    // Error queue system (max 8 errors)
+    static const uint8_t MAX_ERRORS = 8;
+    struct ErrorEntry {
+        char message[32];
+        bool critical;  // true = blocks everything, false = dismissible
+    };
+    ErrorEntry errorQueue[MAX_ERRORS];
+    uint8_t errorCount;
+    uint8_t currentErrorIndex;
+    
     // Screen rendering methods
     void showIdleScreen(SensorManager* sensors, ActuatorManager* actuators);
-    void showMainMenu(MenuManager* menu, SensorManager* sensors);
+    void showMainMenu(MenuManager* menu, SensorManager* sensors, ActuatorManager* actuators);
     void showSettingsMenu(MenuManager* menu);
-    void showActuatorControl(MenuManager* menu, ActuatorManager* actuators, int8_t actuatorId);
+    void showErrorScreen();  // Display current error from queue
     
     // Helper methods
     void drawHeader(SensorManager* sensors);
     void drawCenteredBitmap(const unsigned char* bitmap, uint8_t width, uint8_t height);
     void drawCenteredText(const char* text, uint8_t y);
+    bool getWaterLevelFlashState();  // Centralized flash logic
 };
 
 #endif // DISPLAY_H

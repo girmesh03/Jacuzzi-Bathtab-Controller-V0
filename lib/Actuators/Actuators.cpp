@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "Actuators.h"
+#include "Sensors.h"
 #include <Wire.h>
 
 // ============================================================================
@@ -43,12 +44,35 @@ bool ActuatorManager::init() {
 }
 
 // ============================================================================
-// SET ACTUATOR STATE
+// SET ACTUATOR STATE WITH SAFETY INTERLOCKS
 // ============================================================================
-bool ActuatorManager::setState(uint8_t actuatorId, bool state) {
+bool ActuatorManager::setState(uint8_t actuatorId, bool state, SensorManager* sensors) {
     if (actuatorId > ACTUATOR_MAX_ID) {
         DEBUG_PRINTLN("ERROR: Invalid actuator ID");
         return false;
+    }
+    
+    // SAFETY INTERLOCK CHECKS (when trying to turn ON)
+    if (state && sensors != nullptr) {
+        // Water level interlock for pumps and heater
+        if ((actuatorId == ACTUATOR_CIRCULATION_PUMP ||
+             actuatorId == ACTUATOR_MASSAGE_PUMP ||
+             actuatorId == ACTUATOR_JET_PUMP ||
+             actuatorId == ACTUATOR_HEATER) &&
+            !sensors->isWaterLevelOK())
+        {
+            DEBUG_PRINT("INTERLOCK VIOLATION: Water level low, cannot activate actuator ");
+            DEBUG_PRINTLN(actuatorId);
+            return false;
+        }
+        
+        // Heater interlock - requires circulation pump running
+        if (actuatorId == ACTUATOR_HEATER &&
+            !getState(ACTUATOR_CIRCULATION_PUMP))
+        {
+            DEBUG_PRINTLN("INTERLOCK VIOLATION: Circulation pump off, cannot activate heater");
+            return false;
+        }
     }
     
     // Update relay state bit field

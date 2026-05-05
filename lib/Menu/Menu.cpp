@@ -43,13 +43,13 @@ const char STR_OFF[] PROGMEM = " OFF";
 // MAIN MENU DATA (PROGMEM) - With bitmaps
 // ============================================================================
 const MenuItem mainMenuItems[] PROGMEM = {
-    {STR_CIRCULATION, circulation_bitmap, MENU_CIRCULATION_PUMP, ACTUATOR_CIRCULATION_PUMP},
-    {STR_MASSAGE, massage_bitmap, MENU_MASSAGE_PUMP, ACTUATOR_MASSAGE_PUMP},
-    {STR_JET, jet_bitmap, MENU_JET_PUMP, ACTUATOR_JET_PUMP},
-    {STR_HEATER, heater_bitmap, MENU_HEATER, ACTUATOR_HEATER},
-    {STR_OZONE, ozone_bitmap, MENU_OZONE, ACTUATOR_OZONE},
-    {STR_SPEAKER, speaker_bitmap, MENU_SPEAKER, ACTUATOR_SPEAKER},
-    {STR_LIGHT, light_bulb_bitmap, MENU_LIGHT, ACTUATOR_LIGHT},
+    {STR_CIRCULATION, circulation_bitmap, MENU_IDLE, ACTUATOR_CIRCULATION_PUMP},
+    {STR_MASSAGE, massage_bitmap, MENU_IDLE, ACTUATOR_MASSAGE_PUMP},
+    {STR_JET, jet_bitmap, MENU_IDLE, ACTUATOR_JET_PUMP},
+    {STR_HEATER, heater_bitmap, MENU_IDLE, ACTUATOR_HEATER},
+    {STR_OZONE, ozone_bitmap, MENU_IDLE, ACTUATOR_OZONE},
+    {STR_SPEAKER, speaker_bitmap, MENU_IDLE, ACTUATOR_SPEAKER},
+    {STR_LIGHT, light_bulb_bitmap, MENU_IDLE, ACTUATOR_LIGHT},
     {STR_SETTINGS, settings_bitmap, MENU_SETTINGS, -1}
 };
 const uint8_t mainMenuCount = 8;
@@ -162,8 +162,11 @@ void MenuManager::handleRotation(bool clockwise)
  * 
  * Navigates between menus based on current state:
  * - From idle: enter main menu
- * - From main menu: enter submenu or actuator control
- * - From submenu: return to parent menu
+ * - From main menu: if Settings, enter settings submenu; if actuator, toggle handled in main.cpp
+ * - From settings menu: enter settings submenu
+ * - From settings submenu: return to settings menu
+ * 
+ * NOTE: Actuator toggle is handled in main.cpp, not here.
  * 
  * Resets idle timeout on interaction.
  * 
@@ -188,14 +191,14 @@ void MenuManager::handlePress()
         MenuItem item;
         memcpy_P(&item, &mainMenuItems[selectedIndex], sizeof(MenuItem));
         
-        // Navigate to submenu
-        if (item.submenu != MENU_IDLE)
+        // Only navigate to Settings submenu (actuator toggle handled in main.cpp)
+        if (item.submenu == MENU_SETTINGS)
         {
-            currentMenu = item.submenu;
+            currentMenu = MENU_SETTINGS;
             selectedIndex = 0;
-            DEBUG_PRINT("Navigated to submenu: ");
-            DEBUG_PRINTLN((int)item.submenu);
+            DEBUG_PRINTLN("Navigated to Settings menu");
         }
+        // For actuators (submenu == MENU_IDLE), do nothing here - toggle handled in main.cpp
     }
     else if (currentMenu == MENU_SETTINGS)
     {
@@ -212,24 +215,19 @@ void MenuManager::handlePress()
             DEBUG_PRINTLN((int)item.submenu);
         }
     }
-    else
+    else if (currentMenu >= MENU_SETTINGS_TEMP && currentMenu <= MENU_SETTINGS_ABOUT)
     {
-        // Return to parent menu from any other menu
-        // Determine parent menu based on current menu
-        if (currentMenu >= MENU_CIRCULATION_PUMP && currentMenu <= MENU_LIGHT)
-        {
-            // Actuator menus return to main menu
-            currentMenu = MENU_MAIN;
-            selectedIndex = 0;
-            DEBUG_PRINTLN("Returned to main menu from actuator control");
-        }
-        else if (currentMenu >= MENU_SETTINGS_TEMP && currentMenu <= MENU_SETTINGS_ABOUT)
-        {
-            // Settings submenus return to settings menu
-            currentMenu = MENU_SETTINGS;
-            selectedIndex = 0;
-            DEBUG_PRINTLN("Returned to settings menu from submenu");
-        }
+        // Settings submenus return to settings menu on button press
+        currentMenu = MENU_SETTINGS;
+        selectedIndex = 0;
+        DEBUG_PRINTLN("Returned to settings menu from submenu");
+    }
+    else if (currentMenu == MENU_SETTINGS)
+    {
+        // Settings menu returns to main menu on button press (Phase 4 temporary)
+        currentMenu = MENU_MAIN;
+        selectedIndex = 0;
+        DEBUG_PRINTLN("Returned to main menu from settings");
     }
 }
 
@@ -296,24 +294,36 @@ bool MenuManager::isIdle()
 }
 
 /**
- * @brief Get actuator ID for current menu selection
+ * @brief Get actuator ID for current menu selection in MENU_MAIN
  * 
- * Returns the actuator ID if current menu is an actuator control menu,
- * otherwise returns -1.
+ * Returns the actuator ID if current menu is MENU_MAIN and selected item
+ * is an actuator, otherwise returns -1.
  * 
- * @return Actuator ID (0-7) or -1 if not an actuator menu
+ * @return Actuator ID (0-7) or -1 if not an actuator menu item
  */
 int8_t MenuManager::getSelectedActuatorId()
 {
-    // Check if current menu is an actuator control menu
-    if (currentMenu >= MENU_CIRCULATION_PUMP && currentMenu <= MENU_LIGHT)
+    // Only works in MENU_MAIN
+    if (currentMenu != MENU_MAIN)
     {
-        // Calculate actuator ID from menu ID
-        // MENU_CIRCULATION_PUMP = 2, ACTUATOR_CIRCULATION_PUMP = 0
-        // MENU_MASSAGE_PUMP = 3, ACTUATOR_MASSAGE_PUMP = 1
-        // etc.
-        return (int8_t)(currentMenu - MENU_CIRCULATION_PUMP);
+        return -1;
     }
     
-    return -1;  // Not an actuator menu
+    // Get selected menu item from PROGMEM
+    MenuItem item;
+    memcpy_P(&item, &mainMenuItems[selectedIndex], sizeof(MenuItem));
+    
+    // Return actuator ID (will be -1 for Settings)
+    return item.actuatorId;
+}
+
+/**
+ * @brief Reset idle timeout
+ * 
+ * Called when user interacts with actuators to prevent timeout
+ * during active use.
+ */
+void MenuManager::resetIdleTimeout()
+{
+    lastInteractionTime = millis();
 }

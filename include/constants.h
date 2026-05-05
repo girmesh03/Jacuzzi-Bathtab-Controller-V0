@@ -33,11 +33,11 @@
 
 // Rotary encoder pins
 #define PIN_ENCODER_CLK 13 // D7 (GPIO13) - safe
-#define PIN_ENCODER_DT 15  // D8 (GPIO15) - REQUIRES external 10kΩ pull-down!
+#define PIN_ENCODER_DT 12  // D6 (GPIO12) - REQUIRES external 10kΩ pull-down!
 #define PIN_ENCODER_SW 0   // D3 (GPIO0) - has pull-up, safe for button
 
 // Output pins
-#define PIN_BUZZER 12 // D6 (GPIO12) - safe, no boot issues
+#define PIN_BUZZER 15 // D8 (GPIO15) - safe, no boot issues
 
 // ============================================================================
 // I2C ADDRESSES

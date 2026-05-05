@@ -20,25 +20,19 @@
 // ============================================================================
 enum MenuId {
     MENU_IDLE,                  // Idle screen (default)
-    MENU_MAIN,                  // Main menu
-    MENU_CIRCULATION_PUMP,      // Circulation pump control
-    MENU_MASSAGE_PUMP,          // Massage pump control
-    MENU_JET_PUMP,              // Jet pump control
-    MENU_HEATER,                // Heater control
-    MENU_OZONE,                 // Ozone generator control
-    MENU_SPEAKER,               // Speaker control
-    MENU_LIGHT,                 // Light control
+    MENU_MAIN,                  // Main menu (actuators + settings)
     MENU_SETTINGS,              // Settings menu
     MENU_SETTINGS_TEMP,         // Target temperature setting
     MENU_SETTINGS_TIMEOUT,      // Idle timeout setting
     MENU_SETTINGS_ABOUT         // About screen
+    // NOTE: Actuator control screens removed - toggle directly from main menu
 };
 
 // ============================================================================
 // MENU ITEM STRUCTURE
 // ============================================================================
 struct MenuItem {
-    const char* label;              // Menu item label (stored in PROGMEM) - for status text only
+    const char* label;              // Menu item label (stored in PROGMEM)
     const unsigned char* bitmap;    // Pointer to bitmap in PROGMEM
     MenuId submenu;                 // Submenu to open, or MENU_IDLE if none
     int8_t actuatorId;              // Actuator index (0-7), or -1 if not an actuator
@@ -59,6 +53,9 @@ public:
     uint8_t getSelectedIndex();
     bool isIdle();
     int8_t getSelectedActuatorId();
+    
+    // Reset idle timeout (called on actuator interaction)
+    void resetIdleTimeout();
     
 private:
     MenuId currentMenu;

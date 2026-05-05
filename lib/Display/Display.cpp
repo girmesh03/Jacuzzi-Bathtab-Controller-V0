@@ -28,9 +28,20 @@ DisplayManager::DisplayManager()
     // Create display object on heap
     display = new Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
     
-    // Initialize frame rate limiting
+    // Initialize frame rate limiting and state
     lastFrameTime = 0;
     needsRedraw = true;
+    waterLevelFlashTime = 0;
+    waterLevelFlashState = false;
+    
+    // Initialize error queue
+    errorCount = 0;
+    currentErrorIndex = 0;
+    for (uint8_t i = 0; i < MAX_ERRORS; i++)
+    {
+        errorQueue[i].message[0] = '\0';
+        errorQueue[i].critical = true;
+    }
 }
 
 // ============================================================================
@@ -113,33 +124,235 @@ void DisplayManager::showReadyMessage()
 }
 
 // ============================================================================
-// SHOW ERROR MESSAGE WITH ERROR BITMAP
+// ERROR QUEUE MANAGEMENT
 // ============================================================================
-void DisplayManager::showError(const char *message)
+
+/**
+ * @brief Add error to queue
+ * 
+ * Adds error message to queue if not already present and queue not full.
+ * 
+ * @param message Error message to add
+ * @param critical True = blocks everything (safety), False = dismissible (user action)
+ */
+void DisplayManager::addError(const char *message, bool critical)
 {
-    DEBUG_PRINT("Displaying error: ");
-    DEBUG_PRINTLN(message);
-
-    // Clear display
-    display->clearDisplay();
-
-    // Draw error bitmap centered (using high temperature error bitmap as generic error)
-    display->drawBitmap(0, 0, high_temperature_error_bitmap, HIGH_TEMPERATURE_ERROR_BMPWIDTH, HIGH_TEMPERATURE_ERROR_BMPHEIGHT, SH110X_WHITE);
-
-    // Display error message at bottom center
-    display->setTextSize(TEXT_SIZE_NORMAL);
+    // Check if error already exists in queue
+    for (uint8_t i = 0; i < errorCount; i++)
+    {
+        if (strcmp(errorQueue[i].message, message) == 0)
+        {
+            // Already in queue - don't log again
+            return;
+        }
+    }
     
-    // Calculate text width for centering
-    int16_t x1, y1;
-    uint16_t w, h;
-    display->getTextBounds(message, 0, 0, &x1, &y1, &w, &h);
-    uint8_t x = (SCREEN_WIDTH - w) / 2;
+    // Check if queue is full
+    if (errorCount >= MAX_ERRORS)
+    {
+        DEBUG_PRINTLN("ERROR: Error queue full!");
+        return;
+    }
     
-    display->setCursor(x, 54);
-    display->println(message);
+    // Add error to queue
+    strncpy(errorQueue[errorCount].message, message, 31);
+    errorQueue[errorCount].message[31] = '\0';
+    errorQueue[errorCount].critical = critical;
+    errorCount++;
+    
+    // Log only when actually adding
+    DEBUG_PRINT("Error added: ");
+    DEBUG_PRINT(message);
+    DEBUG_PRINT(critical ? " (CRITICAL)" : " (DISMISSIBLE)");
+    DEBUG_PRINT(" - Total: ");
+    DEBUG_PRINTLN(errorCount);
+}
 
-    // Update display to show content
-    display->display();
+/**
+ * @brief Remove specific error from queue
+ * 
+ * Removes error message from queue if present.
+ * 
+ * @param message Error message to remove
+ */
+void DisplayManager::removeError(const char *message)
+{
+    // Find error in queue
+    for (uint8_t i = 0; i < errorCount; i++)
+    {
+        if (strcmp(errorQueue[i].message, message) == 0)
+        {
+            // Found - shift remaining errors down
+            for (uint8_t j = i; j < errorCount - 1; j++)
+            {
+                strcpy(errorQueue[j].message, errorQueue[j + 1].message);
+                errorQueue[j].critical = errorQueue[j + 1].critical;
+            }
+            errorCount--;
+            
+            // Adjust current index if needed
+            if (currentErrorIndex >= errorCount && errorCount > 0)
+            {
+                currentErrorIndex = errorCount - 1;
+            }
+            
+            // Log only when actually removing
+            DEBUG_PRINT("Error removed: ");
+            DEBUG_PRINT(message);
+            DEBUG_PRINT(" - Remaining: ");
+            DEBUG_PRINTLN(errorCount);
+            return;
+        }
+    }
+    
+    // Not found - don't log
+}
+
+/**
+ * @brief Clear all errors from queue
+ */
+void DisplayManager::clearAllErrors()
+{
+    errorCount = 0;
+    currentErrorIndex = 0;
+    DEBUG_PRINTLN("All errors cleared");
+}
+
+/**
+ * @brief Check if any errors exist in queue
+ * 
+ * @return true if errors exist, false otherwise
+ */
+bool DisplayManager::hasErrors()
+{
+    return errorCount > 0;
+}
+
+/**
+ * @brief Check if any critical errors exist in queue
+ * 
+ * @return true if critical errors exist, false otherwise
+ */
+bool DisplayManager::hasCriticalErrors()
+{
+    for (uint8_t i = 0; i < errorCount; i++)
+    {
+        if (errorQueue[i].critical)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @brief Get current error message
+ * 
+ * @return Pointer to current error message, or nullptr if no errors
+ */
+const char* DisplayManager::getCurrentError()
+{
+    if (errorCount == 0)
+    {
+        return nullptr;
+    }
+    
+    return errorQueue[currentErrorIndex].message;
+}
+
+/**
+ * @brief Check if current error is critical
+ * 
+ * @return true if current error is critical, false otherwise
+ */
+bool DisplayManager::isCurrentErrorCritical()
+{
+    if (errorCount == 0)
+    {
+        return false;
+    }
+    
+    return errorQueue[currentErrorIndex].critical;
+}
+
+/**
+ * @brief Navigate to next error in queue
+ */
+void DisplayManager::nextError()
+{
+    if (errorCount == 0)
+    {
+        return;
+    }
+    
+    currentErrorIndex++;
+    if (currentErrorIndex >= errorCount)
+    {
+        currentErrorIndex = 0;  // Wrap to first
+    }
+    
+    DEBUG_PRINT("Next error: ");
+    DEBUG_PRINTLN(currentErrorIndex);
+}
+
+/**
+ * @brief Navigate to previous error in queue
+ */
+void DisplayManager::prevError()
+{
+    if (errorCount == 0)
+    {
+        return;
+    }
+    
+    if (currentErrorIndex == 0)
+    {
+        currentErrorIndex = errorCount - 1;  // Wrap to last
+    }
+    else
+    {
+        currentErrorIndex--;
+    }
+    
+    DEBUG_PRINT("Previous error: ");
+    DEBUG_PRINTLN(currentErrorIndex);
+}
+
+/**
+ * @brief Dismiss current error (only if not critical)
+ */
+void DisplayManager::dismissCurrentError()
+{
+    if (errorCount == 0)
+    {
+        return;
+    }
+    
+    // Check if current error is dismissible
+    if (!errorQueue[currentErrorIndex].critical)
+    {
+        DEBUG_PRINT("Dismissing error: ");
+        DEBUG_PRINTLN(errorQueue[currentErrorIndex].message);
+        
+        // Remove current error
+        char msgCopy[32];
+        strcpy(msgCopy, errorQueue[currentErrorIndex].message);
+        removeError(msgCopy);
+    }
+    else
+    {
+        DEBUG_PRINTLN("Cannot dismiss critical error");
+    }
+}
+
+/**
+ * @brief Get total error count
+ * 
+ * @return Number of errors in queue
+ */
+uint8_t DisplayManager::getErrorCount()
+{
+    return errorCount;
 }
 
 // ============================================================================
@@ -350,15 +563,33 @@ void DisplayManager::drawCenteredText(const char* text, uint8_t y)
     display->print(text);
 }
 
+/**
+ * @brief Get centralized water level flash state
+ * 
+ * Provides synchronized flashing across all screens.
+ * 
+ * @return true if flash should be visible, false otherwise
+ */
+bool DisplayManager::getWaterLevelFlashState()
+{
+    if (millis() - waterLevelFlashTime >= WATER_LEVEL_FLASH_INTERVAL)
+    {
+        waterLevelFlashState = !waterLevelFlashState;
+        waterLevelFlashTime = millis();
+    }
+    return waterLevelFlashState;
+}
+
 // ============================================================================
 // PHASE 4: MENU SYSTEM DISPLAY METHODS
 // ============================================================================
 
 /**
- * @brief Display idle screen with temperature and water level
+ * @brief Display idle screen with thermometer bitmap and temperature
  * 
- * Shows large temperature display, water level status, and placeholder
- * for actuator status indicators (Phase 5).
+ * Shows 2-column layout:
+ * - Left column: Centered thermometer bitmap (32x32)
+ * - Right column: Centered temperature value
  * 
  * @param sensors Pointer to SensorManager for current readings
  * @param actuators Pointer to ActuatorManager for actuator states
@@ -370,55 +601,59 @@ void DisplayManager::showIdleScreen(SensorManager* sensors, ActuatorManager* act
     display->clearDisplay();
     
     // ========================================================================
-    // DISPLAY TEMPERATURE (LARGE, PROMINENT)
+    // LEFT COLUMN: THERMOMETER BITMAP (32x32 centered vertically)
+    // ========================================================================
+    uint8_t bitmapX = 16;  // Center in left half (64/2 - 32/2 = 16)
+    uint8_t bitmapY = 16;  // Center vertically (64/2 - 32/2 = 16)
+    display->drawBitmap(bitmapX, bitmapY, thermometer_small_bitmap, 
+                       THERMOMETER_SMALL_BMPWIDTH, THERMOMETER_SMALL_BMPHEIGHT, SH110X_WHITE);
+    
+    // ========================================================================
+    // RIGHT COLUMN: TEMPERATURE VALUE (centered vertically)
     // ========================================================================
     display->setTextSize(TEXT_SIZE_LARGE);
-    display->setCursor(10, 10);
+    display->setTextColor(SH110X_WHITE);
     
     if (sensors->isTemperatureValid())
     {
-        display->print(sensors->getTemperature(), 1);
-        display->println(F(" C"));
+        // Format temperature as "XX.X C"
+        char tempStr[16];
+        dtostrf(sensors->getTemperature(), 4, 1, tempStr);  // 4 chars wide, 1 decimal
+        strcat(tempStr, " C");
+        
+        // Calculate position for right column (centered)
+        int16_t x1, y1;
+        uint16_t w, h;
+        display->getTextBounds(tempStr, 0, 0, &x1, &y1, &w, &h);
+        
+        uint8_t textX = 64 + (64 - w) / 2;  // Center in right half
+        uint8_t textY = (64 - h) / 2;       // Center vertically
+        
+        display->setCursor(textX, textY);
+        display->print(tempStr);
     }
     else
     {
-        display->println(F("TEMP ERR"));
+        // Display error message
+        display->setTextSize(TEXT_SIZE_NORMAL);
+        display->setCursor(70, 24);
+        display->println(F("TEMP"));
+        display->setCursor(70, 34);
+        display->println(F("ERROR"));
     }
     
     // ========================================================================
-    // DISPLAY WATER LEVEL STATUS
+    // BOTTOM: WATER LEVEL WARNING (if low)
     // ========================================================================
-    display->setTextSize(TEXT_SIZE_NORMAL);
-    display->setCursor(10, 40);
-    
-    if (sensors->isWaterLevelOK())
-    {
-        display->println(F("Water: OK"));
-    }
-    else
+    if (!sensors->isWaterLevelOK())
     {
         // Flash warning at 1 Hz
-        static uint32_t lastFlashTime = 0;
-        static bool flashState = false;
-        
-        if (millis() - lastFlashTime >= WATER_LEVEL_FLASH_INTERVAL)
+        if (getWaterLevelFlashState())
         {
-            flashState = !flashState;
-            lastFlashTime = millis();
-        }
-        
-        if (flashState)
-        {
-            display->println(F("LOW WATER"));
+            display->setTextSize(TEXT_SIZE_NORMAL);
+            drawCenteredText("LOW WATER", 54);
         }
     }
-    
-    // ========================================================================
-    // ACTUATOR STATUS INDICATORS (PLACEHOLDER FOR PHASE 5)
-    // ========================================================================
-    display->setCursor(0, 56);
-    display->setTextSize(TEXT_SIZE_NORMAL);
-    display->print(F("Status: Idle"));
     
     // ========================================================================
     // UPDATE DISPLAY
@@ -427,17 +662,20 @@ void DisplayManager::showIdleScreen(SensorManager* sensors, ActuatorManager* act
 }
 
 /**
- * @brief Display main menu with bitmap-based rendering
+ * @brief Display main menu with bitmap-based rendering and actuator states
  * 
- * Shows selected menu item's bitmap centered on screen with label at bottom center.
- * No scrolling - one bitmap at a time.
+ * Shows selected menu item's bitmap centered on screen with label and state at bottom center.
+ * For actuators: shows "Label ON" or "Label OFF"
+ * For Settings: shows "Settings"
+ * Bitmap is positioned to not overlap with text.
  * 
  * @param menu Pointer to MenuManager for current menu state
  * @param sensors Pointer to SensorManager for header display
+ * @param actuators Pointer to ActuatorManager for actuator states
  * 
  * Requirements: 11.3, 11.4, 11.5, 11.6
  */
-void DisplayManager::showMainMenu(MenuManager* menu, SensorManager* sensors)
+void DisplayManager::showMainMenu(MenuManager* menu, SensorManager* sensors, ActuatorManager* actuators)
 {
     display->clearDisplay();
     
@@ -446,15 +684,40 @@ void DisplayManager::showMainMenu(MenuManager* menu, SensorManager* sensors)
     MenuItem item;
     memcpy_P(&item, &mainMenuItems[selectedIndex], sizeof(MenuItem));
     
-    // Draw bitmap shifted up to leave space for text at bottom
+    // Draw bitmap centered horizontally, positioned to leave space for text at bottom
+    // Bitmap is 128x64, but we shift it up by 10 pixels to leave room for text
     const unsigned char* bitmap = (const unsigned char*)pgm_read_ptr(&item.bitmap);
-    display->drawBitmap(0, -5, bitmap, 128, 64, SH110X_WHITE);
+    display->drawBitmap(0, -10, bitmap, 128, 64, SH110X_WHITE);
     
-    // Draw label at bottom center
-    display->setTextSize(TEXT_SIZE_NORMAL);
+    // Build status string
+    char statusText[42];
     char label[32];
     strcpy_P(label, item.label);
-    drawCenteredText(label, 56);
+    
+    if (item.actuatorId >= 0)
+    {
+        // Actuator item - show state (ON/OFF)
+        bool state = actuators->getState(item.actuatorId);
+        strcpy(statusText, label);
+        if (state)
+        {
+            strcat_P(statusText, STR_ON);
+        }
+        else
+        {
+            strcat_P(statusText, STR_OFF);
+        }
+    }
+    else
+    {
+        // Settings item - just show label
+        strcpy(statusText, label);
+    }
+    
+    // Draw status at bottom center (text size 1)
+    display->setTextSize(TEXT_SIZE_NORMAL);
+    display->setTextColor(SH110X_WHITE);
+    drawCenteredText(statusText, 56);
     
     // Update display
     display->display();
@@ -478,12 +741,13 @@ void DisplayManager::showSettingsMenu(MenuManager* menu)
     MenuItem item;
     memcpy_P(&item, &settingsMenuItems[selectedIndex], sizeof(MenuItem));
     
-    // Draw bitmap shifted up to leave space for text at bottom
+    // Draw bitmap centered horizontally, positioned to leave space for text at bottom
     const unsigned char* bitmap = (const unsigned char*)pgm_read_ptr(&item.bitmap);
-    display->drawBitmap(0, -5, bitmap, 128, 64, SH110X_WHITE);
+    display->drawBitmap(0, -10, bitmap, 128, 64, SH110X_WHITE);
     
     // Draw label at bottom center
     display->setTextSize(TEXT_SIZE_NORMAL);
+    display->setTextColor(SH110X_WHITE);
     char label[32];
     strcpy_P(label, item.label);
     drawCenteredText(label, 56);
@@ -493,60 +757,81 @@ void DisplayManager::showSettingsMenu(MenuManager* menu)
 }
 
 /**
- * @brief Display actuator control screen with bitmap and status
+ * @brief Display error screen with current error from queue
  * 
- * Shows actuator bitmap centered with label and ON/OFF status at bottom center.
+ * Shows error bitmap centered with error message at bottom center.
+ * If multiple errors exist, shows current error with navigation indicators.
+ * Shows "Press to dismiss" for non-critical errors.
+ * Uses appropriate bitmap based on error type.
  * 
- * @param menu Pointer to MenuManager for current menu state
- * @param actuators Pointer to ActuatorManager for actuator states
- * @param actuatorId Actuator ID (0-7)
+ * Requirements: Error display system
  */
-void DisplayManager::showActuatorControl(MenuManager* menu, ActuatorManager* actuators, int8_t actuatorId)
+void DisplayManager::showErrorScreen()
 {
     display->clearDisplay();
     
-    // Get current menu item from PROGMEM
-    MenuItem item;
-    
-    // Determine which menu we're in
-    MenuId currentMenu = menu->getCurrentMenu();
-    if (currentMenu >= MENU_CIRCULATION_PUMP && currentMenu <= MENU_LIGHT)
+    // Get current error message
+    const char* errorMsg = getCurrentError();
+    if (errorMsg == nullptr)
     {
-        // Calculate index in main menu
-        uint8_t menuIndex = currentMenu - MENU_CIRCULATION_PUMP;
-        memcpy_P(&item, &mainMenuItems[menuIndex], sizeof(MenuItem));
-    }
-    else
-    {
-        // Fallback - shouldn't happen
         return;
     }
     
-    // Draw bitmap shifted up to leave space for text at bottom
-    const unsigned char* bitmap = (const unsigned char*)pgm_read_ptr(&item.bitmap);
-    display->drawBitmap(0, -5, bitmap, 128, 64, SH110X_WHITE);
+    // Select appropriate error bitmap based on error type
+    const unsigned char* errorBitmap = high_temperature_error_bitmap;
+    uint8_t bitmapWidth = HIGH_TEMPERATURE_ERROR_BMPWIDTH;
+    uint8_t bitmapHeight = HIGH_TEMPERATURE_ERROR_BMPHEIGHT;
     
-    // Get actuator state
-    bool state = actuators->getState(actuatorId);
-    
-    // Build status string: "Label ON" or "Label OFF"
-    char label[32];
-    strcpy_P(label, item.label);
-    
-    char status[42];
-    strcpy(status, label);
-    if (state)
+    if (strstr(errorMsg, "WATER") != nullptr || strstr(errorMsg, "Water") != nullptr)
     {
-        strcat_P(status, STR_ON);
+        // Water-related error
+        errorBitmap = low_water_level_error_bitmap;
+        bitmapWidth = LOW_WATER_LEVEL_ERROR_BMPWIDTH;
+        bitmapHeight = LOW_WATER_LEVEL_ERROR_BMPHEIGHT;
+    }
+    else if (strstr(errorMsg, "SENSOR") != nullptr || strstr(errorMsg, "Sensor") != nullptr)
+    {
+        // Sensor-related error
+        errorBitmap = sensor_error_bitmap;
+        bitmapWidth = SENSOR_ERROR_BMPWIDTH;
+        bitmapHeight = SENSOR_ERROR_BMPHEIGHT;
+    }
+    else if (strstr(errorMsg, "TEMP") != nullptr || strstr(errorMsg, "Temp") != nullptr)
+    {
+        // Temperature-related error
+        errorBitmap = high_temperature_error_bitmap;
+        bitmapWidth = HIGH_TEMPERATURE_ERROR_BMPWIDTH;
+        bitmapHeight = HIGH_TEMPERATURE_ERROR_BMPHEIGHT;
+    }
+    
+    // Draw error bitmap centered (128x64)
+    display->drawBitmap(0, 0, errorBitmap, bitmapWidth, bitmapHeight, SH110X_WHITE);
+    
+    // Build error text with count if multiple errors
+    char errorText[42];
+    if (errorCount > 1)
+    {
+        // Show "Error X/Y: Message"
+        snprintf(errorText, sizeof(errorText), "%d/%d: %s", 
+                currentErrorIndex + 1, errorCount, errorMsg);
     }
     else
     {
-        strcat_P(status, STR_OFF);
+        // Show just message
+        strncpy(errorText, errorMsg, sizeof(errorText) - 1);
+        errorText[sizeof(errorText) - 1] = '\0';
     }
     
-    // Draw status at bottom center
+    // Display error text at bottom center (text size 1)
     display->setTextSize(TEXT_SIZE_NORMAL);
-    drawCenteredText(status, 54);
+    display->setTextColor(SH110X_WHITE);
+    drawCenteredText(errorText, 48);
+    
+    // Show dismissal hint for non-critical errors
+    if (!isCurrentErrorCritical())
+    {
+        drawCenteredText("Press to exit", 56);
+    }
     
     // Update display
     display->display();
@@ -558,6 +843,9 @@ void DisplayManager::showActuatorControl(MenuManager* menu, ActuatorManager* act
  * Implements frame rate limiting (10 FPS minimum) and routes to appropriate
  * screen rendering method based on current menu.
  * 
+ * CRITICAL: If critical errors exist, only shows error screen and blocks all other displays.
+ * Non-critical errors can be dismissed to continue operation.
+ * 
  * @param sensors Pointer to SensorManager for sensor data
  * @param menu Pointer to MenuManager for menu state
  * @param actuators Pointer to ActuatorManager for actuator states
@@ -567,14 +855,29 @@ void DisplayManager::showActuatorControl(MenuManager* menu, ActuatorManager* act
 void DisplayManager::update(SensorManager* sensors, MenuManager* menu, ActuatorManager* actuators)
 {
     // ========================================================================
+    // ERROR STATE CHECK (HIGHEST PRIORITY)
+    // ========================================================================
+    if (hasErrors())
+    {
+        // Errors exist - show error screen
+        if (millis() - lastFrameTime >= DISPLAY_MIN_FRAME_TIME)
+        {
+            showErrorScreen();
+            lastFrameTime = millis();
+        }
+        return;  // Block all other display updates while errors exist
+    }
+    
+    // ========================================================================
     // FRAME RATE LIMITING (10 FPS MINIMUM = 100ms)
     // ========================================================================
-    if (millis() - lastFrameTime < DISPLAY_MIN_FRAME_TIME)
+    if (!needsRedraw && (millis() - lastFrameTime < DISPLAY_MIN_FRAME_TIME))
     {
-        return;  // Skip update if not enough time elapsed
+        return;  // Skip update if not enough time elapsed and no forced redraw
     }
     
     lastFrameTime = millis();
+    needsRedraw = false;  // Clear dirty flag
     
     // ========================================================================
     // ROUTE TO APPROPRIATE SCREEN
@@ -588,22 +891,11 @@ void DisplayManager::update(SensorManager* sensors, MenuManager* menu, ActuatorM
             break;
             
         case MENU_MAIN:
-            showMainMenu(menu, sensors);
+            showMainMenu(menu, sensors, actuators);
             break;
             
         case MENU_SETTINGS:
             showSettingsMenu(menu);
-            break;
-            
-        case MENU_CIRCULATION_PUMP:
-        case MENU_MASSAGE_PUMP:
-        case MENU_JET_PUMP:
-        case MENU_HEATER:
-        case MENU_OZONE:
-        case MENU_SPEAKER:
-        case MENU_LIGHT:
-            // Actuator control screens
-            showActuatorControl(menu, actuators, menu->getSelectedActuatorId());
             break;
             
         case MENU_SETTINGS_TEMP:
@@ -612,9 +904,9 @@ void DisplayManager::update(SensorManager* sensors, MenuManager* menu, ActuatorM
             // Settings submenus (placeholder for Phase 7)
             display->clearDisplay();
             display->setTextSize(TEXT_SIZE_NORMAL);
-            display->setCursor(0, 20);
-            display->println(F("Settings submenu"));
-            display->println(F("(Phase 7)"));
+            display->setTextColor(SH110X_WHITE);
+            drawCenteredText("Settings", 20);
+            drawCenteredText("(Phase 7)", 30);
             display->display();
             break;
             
@@ -622,8 +914,8 @@ void DisplayManager::update(SensorManager* sensors, MenuManager* menu, ActuatorM
             // Unknown menu - display error
             display->clearDisplay();
             display->setTextSize(TEXT_SIZE_NORMAL);
-            display->setCursor(0, 20);
-            display->println(F("Unknown menu"));
+            display->setTextColor(SH110X_WHITE);
+            drawCenteredText("Unknown menu", 28);
             display->display();
             break;
     }
